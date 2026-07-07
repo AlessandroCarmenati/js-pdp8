@@ -132,20 +132,17 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     
     <script>
-        // Funzione per convertire una stringa ottale in un numero decimale intero
-        function octalToDec(octalStr) {
-            return parseInt(octalStr, 8);
-        }
+        function octalToDec(octalStr) { return parseInt(octalStr, 8); }
 
-        var pdp8 = { pc: 0, ac: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, running: false, startAddr: 0 };
-        var srcText = "ORG 180\nCMA\nINC\nADD X\nSTA Y\nHLT\nX, HEX 1\nY, HEX 0\nEND";
+        var pdp8 = { pc: 0, ac: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, labels: {}, running: false, startAddr: 0 };
+        var srcText = "ORG 180\nCMA\nINC\nADD X\nSTA Y\nBUN Y I\nHLT\nORG 179\nISZ X\nINIT, LDA X\nADD Y\nSTA Y I\nBSA Y\nISZ Y I\nHEX 7001\nBUN INIT\nX, HEX 1\nY, HEX 181\nZ, DEC 383\nBUN X I\nADD Z\nEND";
 
         window.addEventListener('load', function() {
             document.getElementById('src-editor').value = srcText;
-            pdpCompile(); // Esegue una prima compilazione all'avvio
+            pdpCompile();
         });
 
         function updateUI() {
@@ -155,96 +152,122 @@
             document.getElementById('lbl_OPR').innerText = pdp8.opr.toString(2).padStart(3, '0');
             document.getElementById('lbl_I').innerText = pdp8.i;
             document.getElementById('lbl_ACHEX').innerText = pdp8.ac.toString(16).toUpperCase().padStart(4, '0');
-            document.getElementById('lbl_ACINT').innerText = pdp8.ac;
+            document.getElementById('lbl_ACINT').innerText = (pdp8.ac > 0x7FF) ? pdp8.ac - 0x1000 : pdp8.ac; // Mostra il valore con segno se in complemento a due
             document.getElementById('lbl_cycle').innerText = pdp8.cycle;
             document.getElementById('lbl_last').innerText = pdp8.last;
 
             var ramStr = "";
-            for (var addr in pdp8.ram) {
-                // Mostra l'indirizzo in formato Ottale (tipico del PDP-8)
-                var octAddr = parseInt(addr, 10).toString(8);
-                ramStr += "Indirizzo [" + octAddr + " Ottale]: " + pdp8.ram[addr] + "\n";
-            }
+            var sortedAddrs = Object.keys(pdp8.ram).map(Number).sort((a,b) => a-b);
+            sortedAddrs.forEach(function(addr) {
+                var octAddr = addr.toString(8);
+                var val = pdp8.ram[addr];
+                var displayVal = typeof val === 'number' ? "HEX " + val.toString(16).toUpperCase() : val;
+                ramStr += "Indirizzo [" + octAddr + "]: " + displayVal + "\n";
+            });
             document.getElementById('ram-viewer').innerText = ramStr || "RAM vuota. Premi Compile.";
         }
 
         function pdpCompile() {
             var lines = document.getElementById('src-editor').value.split('\n');
             pdp8.ram = {};
-            var currentAddrDec = octalToDec("100"); // Default se manca ORG (es. cella 100 ottale)
+            pdp8.labels = {};
+            var currentAddrDec = octalToDec("180");
             var targetPC = null;
             
+            // Passo 1: Trova tutte le etichette (Label) e mappa gli indirizzi di memoria
             lines.forEach(function(line) {
-                line = line.trim().toUpperCase();
+                line = line.trim().split("//")[0].split(";")[0].toUpperCase(); // Rimuove i commenti
                 if(!line || line.startsWith('END')) return;
                 
                 if(line.startsWith('ORG')) {
-                    var parts = line.split(/\s+/);
-                    var octalVal = parts[1];
-                    currentAddrDec = octalToDec(octalVal);
-                    if (targetPC === null) {
-                        targetPC = currentAddrDec; // Il PC parte dal primo ORG trovato
-                    }
+                    currentAddrDec = octalToDec(line.split(/\s+/)[1]);
+                    if (targetPC === null) targetPC = currentAddrDec;
                     return;
+                }
+                
+                if(line.indexOf(',') > -1) {
+                    var labelPart = line.split(',')[0].trim();
+                    pdp8.labels[labelPart] = currentAddrDec;
+                    line = line.split(',')[1].trim();
                 }
                 
                 pdp8.ram[currentAddrDec] = line;
                 currentAddrDec++;
             });
             
+            // Passo 2: Sostituisce i valori numerici costanti in RAM
+            for (var addr in pdp8.ram) {
+                var instr = pdp8.ram[addr];
+                if (instr.startsWith('HEX')) {
+                    pdp8.ram[addr] = parseInt(instr.split(/\s+/)[1], 16);
+                } else if (instr.startsWith('DEC')) {
+                    var num = parseInt(instr.split(/\s+/)[1], 10);
+                    pdp8.ram[addr] = num >= 0 ? num : (0x1000 + num) & 0xFFF;
+                }
+            }
+
             pdp8.startAddr = targetPC || octalToDec("180");
             pdp8.pc = pdp8.startAddr;
+            pdp8.ac = 0;
             
-            document.getElementById('lbl_term').value = "Compilazione completata.\nIl Program Counter (PC) è stato impostato all'indirizzo ottale: " + pdp8.pc.toString(8);
+            document.getElementById('lbl_term').value = "Compilazione eseguita. Simboli e variabili mappati.";
             updateUI();
         }
 
         function pdpReset() {
-            pdp8.ac = 0;
-            pdp8.mar = 0;
-            pdp8.mbr = 0;
-            pdp8.opr = 0;
-            pdp8.i = 0;
-            pdp8.cycle = "FETCH";
-            pdp8.last = "NOP";
-            pdp8.pc = pdp8.startAddr;
-            document.getElementById('lbl_term').value = "Simulatore resettato all'indirizzo ottale " + pdp8.pc.toString(8);
-            updateUI();
+            pdpCompile();
+            document.getElementById('lbl_term').value = "Resettato all'indirizzo ottale " + pdp8.pc.toString(8);
         }
 
-        function pdpStart() { 
-            pdp8.running = true; 
-            document.getElementById('lbl_term').value = "Simulatore in esecuzione..."; 
-        }
-        
-        function pdpStop() { 
-            pdp8.running = false; 
-            document.getElementById('lbl_term').value = "Simulatore interrotto."; 
-        }
+        function pdpStart() { pdp8.running = true; document.getElementById('lbl_term').value = "Macchina attiva."; }
+        function pdpStop() { pdp8.running = false; document.getElementById('lbl_term').value = "Macchina arrestata."; }
         
         function pdpStep() {
-            if(!pdp8.ram[pdp8.pc]) {
-                document.getElementById('lbl_term').value = "Fine del codice o HLT raggiunto all'indirizzo ottale " + pdp8.pc.toString(8);
+            if(pdp8.ram[pdp8.pc] === undefined) {
+                document.getElementById('lbl_term').value = "Fine del codice o HLT raggiunto.";
                 return;
             }
             
             var currentInstr = pdp8.ram[pdp8.pc];
-            pdp8.last = currentInstr;
             pdp8.mar = pdp8.pc;
+            pdp8.last = typeof currentInstr === 'number' ? "DATO: " + currentInstr.toString(16).toUpperCase() : currentInstr;
             
-            // Logica minimale di esecuzione istruzioni hardware
-            if(currentInstr.indexOf('CMA') > -1) { 
-                pdp8.ac = (~pdp8.ac) & 0xFFF; // Il registro AC del PDP-8 è a 12 bit
-            }
-            else if(currentInstr.indexOf('INC') > -1) { 
-                pdp8.ac = (pdp8.ac + 1) & 0xFFF; 
-            }
-            else if(currentInstr.indexOf('HLT') > -1) { 
-                pdp8.running = false;
-                document.getElementById('lbl_term').value = "Istruzione HLT eseguita. Macchina ferma.";
+            // Incrementa sequenzialmente il Program Counter
+            pdp8.pc = (pdp8.pc + 1) & 0xFFF;
+
+            if (typeof currentInstr === 'string') {
+                var tokens = currentInstr.split(/\s+/);
+                var op = tokens[0];
+                var operand = tokens[1];
+                var isIndirect = tokens[2] === 'I' || (operand && tokens.indexOf('I') > -1);
+                
+                // Risoluzione dell'indirizzo dell'operando (Label)
+                var targetMemDec = pdp8.labels[operand] !== undefined ? pdp8.labels[operand] : parseInt(operand, 8);
+                
+                if (isIndirect && targetMemDec !== undefined) {
+                    targetMemDec = pdp8.ram[targetMemDec]; // Risoluzione indirizzamento indiretto
+                }
+
+                // Esecuzione istruzioni hardware del set PDP-8
+                if (op === 'CMA') {
+                    pdp8.ac = (~pdp8.ac) & 0xFFF;
+                } else if (op === 'INC') {
+                    pdp8.ac = (pdp8.ac + 1) & 0xFFF;
+                } else if (op === 'LDA' && targetMemDec !== undefined) {
+                    pdp8.ac = pdp8.ram[targetMemDec] & 0xFFF;
+                } else if (op === 'ADD' && targetMemDec !== undefined) {
+                    var val = typeof pdp8.ram[targetMemDec] === 'number' ? pdp8.ram[targetMemDec] : 0;
+                    pdp8.ac = (pdp8.ac + val) & 0xFFF;
+                } else if (op === 'STA' && targetMemDec !== undefined) {
+                    pdp8.ram[targetMemDec] = pdp8.ac;
+                } else if (op === 'BUN' && targetMemDec !== undefined) {
+                    pdp8.pc = targetMemDec;
+                } else if (op === 'HLT') {
+                    pdp8.running = false;
+                    document.getElementById('lbl_term').value = "Eseguito HLT. Sistema arrestato.";
+                }
             }
             
-            pdp8.pc++;
             updateUI();
         }
         
