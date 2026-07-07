@@ -1,172 +1,189 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
   <head>
-    <!-- Required meta tags always come first -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>JS-PDP8 Mobile Modern</title>
 
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
-    
-    <!-- Tether CSS -->
     <link rel="stylesheet" href="bower_components/tether/dist/css/tether.min.css">
-    <link rel="stylesheet" href="bower_components/tether/dist/css/tether-theme-basic.min.css">
-    
-    <!-- CodeMirror CSS -->
     <link rel="stylesheet" href="bower_components/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="bower_components/codemirror/theme/mdn-like.css">
-    
-    <!-- My Style -->
     <link rel="stylesheet" href="css/style.css">
 
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-color: #00adb5;
+            --text-color: #eeeeee;
+            --btn-green: #2e7d32;
+            --btn-red: #c62828;
+            --btn-orange: #ef6c00;
+        }
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 10px;
+        }
+        hr { border-top: 1px solid #333; }
+        h5 { color: var(--accent-color); font-weight: bold; margin-bottom: 8px; font-size: 1rem; }
+        
+        /* Griglia dei Pulsanti Mobile-Friendly */
+        .mobile-toolbar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .mobile-toolbar button, .mobile-toolbar label {
+            background-color: #333 !important;
+            color: white !important;
+            border: none !important;
+            padding: 12px 2px !important;
+            font-size: 0.8rem !important;
+            font-weight: bold !important;
+            border-radius: 6px !important;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            margin: 0 !important;
+            cursor: pointer;
+        }
+        .mobile-toolbar button:active { transform: scale(0.95); }
+        #btn_compile { background-color: var(--accent-color) !important; color: #121212 !important; }
+        #btn_reset { background-color: var(--btn-orange) !important; }
+        #btn_start { background-color: var(--btn-green) !important; }
+        #btn_stop { background-color: var(--btn-red) !important; }
+        #btn_step { background-color: #1565c0 !important; grid-column: span 2; padding: 14px 2px !important; font-size: 0.95rem !important; }
+
+        /* Fix per CodeMirror (Editor di codice e RAM) */
+        .CodeMirror {
+            background: #151515 !important;
+            color: #a7ff83 !important;
+            border: 1px solid #333 !important;
+            border-radius: 6px !important;
+            height: 200px !important;
+            font-size: 0.9rem !important;
+        }
+        .CodeMirror-cursor { border-left: 2px solid white !important; }
+
+        /* Box dei Registri Elegante */
+        .registers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .reg-card {
+            background: #252525;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent-color);
+        }
+        .reg-card h6 { margin: 0; font-size: 0.85rem; display: flex; flex-direction: column; }
+        .reg-card span { font-family: monospace; font-weight: bold; font-size: 0.95rem; margin-top: 2px; }
+        
+        /* Pannello di Controllo e Stato */
+        .cu-container {
+            background: var(--card-bg);
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        .led-group { display: flex; gap: 10px; margin-bottom: 5px; }
+        
+        /* Terminale */
+        .terminal {
+            background-color: #050505 !important;
+            color: #ff5252 !important;
+            font-family: monospace;
+            font-size: 0.8rem;
+            border: 1px solid #333;
+        }
+    </style>
   </head>
   <body>
-    <hr>
+
     <div id="pdp8" class="container-fluid">
-        <div class="row">
-            <div class="col-md-2">
-                <a class="navbar-brand" href="#">JS-PDP8</a>
-            </div>
-            <div class="col col-md-10">
-                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="actions file">
-                        <label class="file btn">
-                            <input type="file" id="file_open" accept=".asm">
-                            <span class="file-open"></span>
-                        </label>
-                        <button class="btn btn-primary-outline" id="btn_save">Save</button>
-                    </div>
-                    <div class="btn-group btn-group-sm" role="group" aria-label="actions pdp8">
-                        <button type="button" class="btn btn-primary-outline" id="btn_compile">Compile</button>
-                        <button type="button" class="btn btn-primary-outline" id="btn_reset">Reset</button>
-                        <button type="button" class="btn btn-primary-outline" id="btn_start">Start</button>
-                        <button type="button" class="btn btn-primary-outline" id="btn_stop">Stop</button>
-                    </div>
-                    <div class="btn-group btn-group-sm" role="group" aria-label="actions executer">
-                        <button type="button" class="btn btn-primary-outline" id="btn_run">Run</button>
-                        <button type="button" class="btn btn-primary-outline" id="btn_fast_run">Fast Run</button>
-                        <button type="button" class="btn btn-primary-outline" id="btn_step">Step</button>
-                        <button type="button" class="btn btn-primary-outline" id="btn_next">Next</button>
-                    </div>
-                </div>
-            </div>
+        <div class="mobile-toolbar">
+            <button type="button" id="btn_compile">Compile</button>
+            <button type="button" id="btn_reset">Reset</button>
+            <button type="button" id="btn_start">Start</button>
+            <button type="button" id="btn_stop">Stop</button>
+            <button type="button" id="btn_run">Run</button>
+            <button type="button" id="btn_fast_run">Fast</button>
+            <button type="button" id="btn_step">STEP</button>
+            <button type="button" id="btn_next">Next</button>
+            <button type="button" id="btn_save" style="display:none;">Save</button>
         </div>
-        <hr>
+
         <div class="row">
-            <div class="col-md-4">
-                <h5>Source</h5>
+            <div class="col-xs-12 col-md-4">
+                <h5>Source Code</h5>
                 <div id="codeMirrorEditor"></div>
             </div>
-            <div class="col-md-4">
-                <h5>Ram</h5>
+            
+            <div class="col-xs-12 col-md-4" style="margin-top: 10px; margin-bottom: 10px;">
+                <h5>Ram Status</h5>
                 <div id="codeMirrorViewer"></div>
             </div>
-            <div class="col-md-4">
-                <div class="row">
-                    <div class="col-sm-12">
-                        <h5>Registers</h5>
-                        <hr>
-                    </div>
+            
+            <div class="col-xs-12 col-md-4">
+                <h5>Registers</h5>
+                <div class="registers-grid">
+                    <div class="reg-card"><h6>PC (Program Counter)<span id="PC">000000000000</span></h6></div>
+                    <div class="reg-card"><h6>OPR<span id="OPR">000</span></h6></div>
+                    <div class="reg-card"><h6>MAR<span id="MAR">000000000000</span></h6></div>
+                    <div class="reg-card"><h6>I (Indirect bit)<span id="I">0</span></h6></div>
+                    <div class="reg-card" style="grid-column: span 2;"><h6>MBR<span id="MBR">0000000000000000</span></h6></div>
+                    <div class="reg-card" style="border-left-color: #a7ff83;"><h6>AC (Hex)<span id="AC_HEX" style="color: #a7ff83;">0</span></h6></div>
+                    <div class="reg-card" style="border-left-color: #a7ff83;"><h6>AC (Int)<span id="AC_INT">0</span></h6></div>
+                    <div class="reg-card" style="grid-column: span 2;"><h6>E-AC<span id="AC">0000000000000000</span></h6></div>
                 </div>
-                <div class="row">
-                    <div class="col-sm-7">
-                        <h6><span class="label label-info" id="PC">000000000000</span> PC</h6>
+
+                <div class="cu-container">
+                    <div class="led-group">
+                        <div>S: <span class="label label-danger" id="S">S</span></div>
+                        <div>INT: <span class="label label-success" id="INT">INT</span></div>
+                        <div>Clock: <span class="label label-default" id="clock">0</span></div>
                     </div>
-                    <div class="col-sm-5">
-                        <h6><span class="label label-opr-i" id="OPR">000</span> OPR</h6>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-7">
-                        <h6><span class="label label-warning" id="MAR">000000000000</span> MAR</h6>
-                    </div>
-                    <div class="col-sm-5">
-                        <h6><span class="label label-opr-i" id="I">0</span> I</h6>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-7">
-                        <h6><span class="label label-mbr" id="MBR">0000000000000000</span> MBR</h6>
-                    </div>
-                    <div class="col-sm-5">
-                        <h6><span class="label label-primary" id="AC_INT">0</span> AC (int)</h6>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-7">
-                        <h6><span class="label label-primary" id="E">0</span>-<span class="label label-primary" id="AC">0000000000000000</span> E-AC</h6>
-                    </div>
-                    <div class="col-sm-5">
-                        <h6><span class="label label-primary" id="AC_HEX">0</span> AC (hex)</h6>
-                    </div>
-                </div>
-                <div class="row">
-                    <hr>
-                    <div class="col-sm-12">
-                        <h5>Control unit and status</h5>
-                        <hr>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-1">
-                        <h6><span class="label label-danger ctrl-unit-led" id="S">S</span></h6>
-                    </div>
-                    <div class="col-sm-1">
-                        <h6><span class="label label-success ctrl-unit-led" id="INT">INT</span></h6>
-                    </div>
-                    <div class="col-sm-3 col-sm-offset-4">
-                        <h6>Clock <span class="label label-clock ctrl-unit-led" id="clock">0</span></h6>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-1">
-                        <h6>F <span class="label label-primary" id="F">0</span></h6>
-                    </div>
-                    <div class="col-sm-1">
-                        <h6>R <span class="label label-primary" id="R">0</span></h6>
-                    </div>
-                    <div class="col-sm-3 col-sm-offset-4">
-                        <h6><span class="label label-fetch" id="cycle">FETCH</span></h6>
-                    </div>
-                </div>
-                <hr>
-                <div class="row">
-                    <div class="col-sm-6">
-                        <h6>Last (sub)instruction executed:</h6>
-                    </div>
-                    <div class="col-sm-6">
-                        <h6><span class="label label-last-istr" id="last_istr">NOP</span></h6>
-                    </div>
+                    <div>Cycle: <span class="label label-info" id="cycle">FETCH</span> (F: <span id="F">0</span>, R: <span id="R">0</span>)</div>
+                    <div style="margin-top: 4px;">Last Exec: <span class="label label-warning" id="last_istr">NOP</span></div>
                 </div>
             </div>
         </div>
-        <hr>
-        <div class="row">
-            <div class="col-sm-6">
-                <h3>Source errors</h3>
-                <ul id="source_errors" class="list-group">
-                </ul>
-            </div>
-            <div class="col-sm-6">
-                <h3>Terminal</h3>
-                <textarea class="form-control terminal" id="terminal" rows="5" readonly></textarea>
+
+        <div class="row" style="margin-top: 15px;">
+            <div class="col-xs-12">
+                <h5>Terminal & Errors</h5>
+                <ul id="source_errors" class="list-group" style="margin-bottom: 5px;"></ul>
+                <textarea class="form-control terminal" id="terminal" rows="3" readonly></textarea>
             </div>
         </div>
     </div>
-    
 
-    <!-- jQuery first, then tether and Bootstrap JS. -->
     <script src="bower_components/jquery/dist/jquery.min.js"></script>
     <script src="bower_components/tether/dist/js/tether.min.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    
-    <!-- CodeMirror -->
     <script src="bower_components/codemirror/lib/codemirror.js"></script>
     <script src="js/pdp8_lang.js"></script>
-    
-    <!-- Main App -->
     <script src="node_modules/js-pdp8/pdp8-compiled.min.js"></script>
     <script src="js/app-compiled.min.js"></script>
+
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                // Incolla automaticamente il codice d'esame dentro CodeMirror se è vuoto
+                if(typeof myCodeMirror !== 'undefined') {
+                    myCodeMirror.setValue("ORG 180\nCMA\nINC\nADD X\nSTA Y\nBUN Y I\nHLT\nORG 179\nISZ X\nINIT, LDA X\nADD Y\nSTA Y I\nBSA Y\nISZ Y I\nHEX 7001\nBUN INIT\nX, HEX 1\nY, HEX 181\nZ, DEC 383\nBUN X I\nADD Z\nEND");
+                }
+            }, 500);
+        });
+    </script>
   </body>
 </html>
