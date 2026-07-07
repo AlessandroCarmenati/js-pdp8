@@ -135,15 +135,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     
     <script>
-        var pdp8 = { pc: 384, ac: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, running: false };
+        // Funzione per convertire una stringa ottale in un numero decimale intero
+        function octalToDec(octalStr) {
+            return parseInt(octalStr, 8);
+        }
+
+        var pdp8 = { pc: 0, ac: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, running: false, startAddr: 0 };
         var srcText = "ORG 180\nCMA\nINC\nADD X\nSTA Y\nHLT\nX, HEX 1\nY, HEX 0\nEND";
 
         window.addEventListener('load', function() {
             document.getElementById('src-editor').value = srcText;
+            pdpCompile(); // Esegue una prima compilazione all'avvio
         });
 
         function updateUI() {
-            document.getElementById('lbl_PC').innerText = pdp8.pc.toString(2).padStart(12, '0');
+            document.getElementById('lbl_PC').innerText = pdp8.pc.toString(2).padStart(12, '0') + " (" + pdp8.pc.toString(8) + " Oct)";
             document.getElementById('lbl_MAR').innerText = pdp8.mar.toString(2).padStart(12, '0');
             document.getElementById('lbl_MBR').innerText = pdp8.mbr.toString(2).padStart(16, '0');
             document.getElementById('lbl_OPR').innerText = pdp8.opr.toString(2).padStart(3, '0');
@@ -155,7 +161,9 @@
 
             var ramStr = "";
             for (var addr in pdp8.ram) {
-                ramStr += addr + " (Octal): " + pdp8.ram[addr] + "\n";
+                // Mostra l'indirizzo in formato Ottale (tipico del PDP-8)
+                var octAddr = parseInt(addr, 10).toString(8);
+                ramStr += "Indirizzo [" + octAddr + " Ottale]: " + pdp8.ram[addr] + "\n";
             }
             document.getElementById('ram-viewer').innerText = ramStr || "RAM vuota. Premi Compile.";
         }
@@ -163,44 +171,78 @@
         function pdpCompile() {
             var lines = document.getElementById('src-editor').value.split('\n');
             pdp8.ram = {};
-            var currentAddr = 384; 
+            var currentAddrDec = octalToDec("100"); // Default se manca ORG (es. cella 100 ottale)
+            var targetPC = null;
             
             lines.forEach(function(line) {
                 line = line.trim().toUpperCase();
                 if(!line || line.startsWith('END')) return;
+                
                 if(line.startsWith('ORG')) {
-                    currentAddr = parseInt(line.split(' ')[1], 10) || 384;
+                    var parts = line.split(/\s+/);
+                    var octalVal = parts[1];
+                    currentAddrDec = octalToDec(octalVal);
+                    if (targetPC === null) {
+                        targetPC = currentAddrDec; // Il PC parte dal primo ORG trovato
+                    }
                     return;
                 }
-                pdp8.ram[currentAddr] = line;
-                currentAddr++;
+                
+                pdp8.ram[currentAddrDec] = line;
+                currentAddrDec++;
             });
             
-            document.getElementById('lbl_term').value = "Compilazione completata con successo.\nCodice caricato in RAM.";
-            pdp8.pc = 384;
+            pdp8.startAddr = targetPC || octalToDec("180");
+            pdp8.pc = pdp8.startAddr;
+            
+            document.getElementById('lbl_term').value = "Compilazione completata.\nIl Program Counter (PC) è stato impostato all'indirizzo ottale: " + pdp8.pc.toString(8);
             updateUI();
         }
 
         function pdpReset() {
-            pdp8 = { pc: 384, ac: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, running: false };
-            pdpCompile();
+            pdp8.ac = 0;
+            pdp8.mar = 0;
+            pdp8.mbr = 0;
+            pdp8.opr = 0;
+            pdp8.i = 0;
+            pdp8.cycle = "FETCH";
+            pdp8.last = "NOP";
+            pdp8.pc = pdp8.startAddr;
+            document.getElementById('lbl_term').value = "Simulatore resettato all'indirizzo ottale " + pdp8.pc.toString(8);
+            updateUI();
         }
 
-        function pdpStart() { pdp8.running = true; document.getElementById('lbl_term').value = "Simulatore Avviato..."; }
-        function pdpStop() { pdp8.running = false; document.getElementById('lbl_term').value = "Simulatore Fermato."; }
+        function pdpStart() { 
+            pdp8.running = true; 
+            document.getElementById('lbl_term').value = "Simulatore in esecuzione..."; 
+        }
+        
+        function pdpStop() { 
+            pdp8.running = false; 
+            document.getElementById('lbl_term').value = "Simulatore interrotto."; 
+        }
         
         function pdpStep() {
             if(!pdp8.ram[pdp8.pc]) {
-                document.getElementById('lbl_term').value = "Fine del codice o HLT raggiunto.";
+                document.getElementById('lbl_term').value = "Fine del codice o HLT raggiunto all'indirizzo ottale " + pdp8.pc.toString(8);
                 return;
             }
+            
             var currentInstr = pdp8.ram[pdp8.pc];
             pdp8.last = currentInstr;
             pdp8.mar = pdp8.pc;
             
-            if(currentInstr.indexOf('CMA') > -1) { pdp8.ac = ~pdp8.ac & 0xFFFF; }
-            if(currentInstr.indexOf('INC') > -1) { pdp8.ac = (pdp8.ac + 1) & 0xFFFF; }
-            if(currentInstr.indexOf('HLT') > -1) { pdp8.running = false; }
+            // Logica minimale di esecuzione istruzioni hardware
+            if(currentInstr.indexOf('CMA') > -1) { 
+                pdp8.ac = (~pdp8.ac) & 0xFFF; // Il registro AC del PDP-8 è a 12 bit
+            }
+            else if(currentInstr.indexOf('INC') > -1) { 
+                pdp8.ac = (pdp8.ac + 1) & 0xFFF; 
+            }
+            else if(currentInstr.indexOf('HLT') > -1) { 
+                pdp8.running = false;
+                document.getElementById('lbl_term').value = "Istruzione HLT eseguita. Macchina ferma.";
+            }
             
             pdp8.pc++;
             updateUI();
