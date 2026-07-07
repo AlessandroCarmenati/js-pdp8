@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <title>JS-PDP8 Mobile Modern</title>
+    <title>JS-PDP8 Mobile Fixed</title>
 
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="bower_components/tether/dist/css/tether.min.css">
@@ -48,17 +48,16 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             margin: 0 !important;
         }
-        .mobile-toolbar button:active { transform: scale(0.95); }
-        #btn_compile { background-color: var(--accent-color) !important; color: #121212 !important; }
-        #btn_reset { background-color: var(--btn-orange) !important; }
-        #btn_start { background-color: var(--btn-green) !important; }
-        #btn_stop { background-color: var(--btn-red) !important; }
-        #btn_step { background-color: #1565c0 !important; grid-column: span 2; padding: 14px 2px !important; font-size: 0.95rem !important; }
+        .mobile-toolbar button:active { transform: scale(0.95); background-color: #444 !important; }
+        .b-compile { background-color: var(--accent-color) !important; color: #121212 !important; }
+        .b-reset { background-color: var(--btn-orange) !important; }
+        .b-start { background-color: var(--btn-green) !important; }
+        .b-stop { background-color: var(--btn-red) !important; }
+        .b-step { background-color: #1565c0 !important; grid-column: span 2; padding: 14px 2px !important; font-size: 0.95rem !important; }
 
-        /* Editor Nativo IOS sbloccato al 100% */
         .native-textarea {
             width: 100%;
-            height: 200px;
+            height: 180px;
             background-color: #151515 !important;
             color: #a7ff83 !important;
             border: 1px solid #333 !important;
@@ -69,13 +68,12 @@
             box-sizing: border-box;
         }
 
-        /* Spazio RAM originale tenuto per compatibilità visiva */
         .CodeMirror {
             background: #151515 !important;
             color: #eeeeee !important;
             border: 1px solid #333 !important;
             border-radius: 6px !important;
-            height: 200px !important;
+            height: 180px !important;
         }
 
         .registers-grid {
@@ -111,29 +109,37 @@
             font-size: 0.8rem;
             border: 1px solid #333;
         }
-        /* Elementi nascosti per non rompere il codice del prof */
+        /* Teniamo nascosti gli elementi che servono a CodeMirror per evitare conflitti touch */
         #codeMirrorEditor { display: none !important; }
     </style>
   </head>
   <body>
 
+    <div style="display:none !important;">
+        <button id="btn_compile">C</button><button id="btn_reset">R</button>
+        <button id="btn_start">S</button><button id="btn_stop">St</button>
+        <button id="btn_run">Ru</button><button id="btn_fast_run">F</button>
+        <button id="btn_step">St</button><button id="btn_next">N</button>
+        <div id="codeMirrorEditor"></div>
+    </div>
+
     <div id="pdp8" class="container-fluid">
         <div class="mobile-toolbar">
-            <button type="button" id="btn_compile">Compile</button>
-            <button type="button" id="btn_reset">Reset</button>
-            <button type="button" id="btn_start">Start</button>
-            <button type="button" id="btn_stop">Stop</button>
-            <button type="button" id="btn_run">Run</button>
-            <button type="button" id="btn_fast_run">Fast</button>
-            <button type="button" id="btn_step">STEP</button>
-            <button type="button" id="btn_next">Next</button>
+            <button type="button" class="b-compile" onclick="triggerProfAction('compile')">Compile</button>
+            <button type="button" class="b-reset" onclick="triggerProfAction('reset')">Reset</button>
+            <button type="button" class="b-start" onclick="triggerProfAction('start')">Start</button>
+            <button type="button" class="b-stop" onclick="triggerProfAction('stop')">Stop</button>
+            <button type="button" onclick="triggerProfAction('run')">Run</button>
+            <button type="button" onclick="triggerProfAction('fastRun')">Fast</button>
+            <button type="button" class="b-step" onclick="triggerProfAction('step')">STEP</button>
+            <button type="button" onclick="triggerProfAction('next')">Next</button>
         </div>
 
         <div class="row">
             <div class="col-xs-12 col-md-4">
-                <h5>Source Code (Editabile)</h5>
+                <h5>Source Code (Modifica qui)</h5>
                 <textarea id="custom_source" class="native-textarea"></textarea>
-                <div id="codeMirrorEditor"></div> </div>
+            </div>
             
             <div class="col-xs-12 col-md-4" style="margin-top: 10px; margin-bottom: 10px;">
                 <h5>Ram Status</h5>
@@ -148,7 +154,7 @@
                     <div class="reg-card"><h6>MAR<span id="MAR">000000000000</span></h6></div>
                     <div class="reg-card"><h6>I (Indirect bit)<span id="I">0</span></h6></div>
                     <div class="reg-card" style="grid-column: span 2;"><h6>MBR<span id="MBR">0000000000000000</span></h6></div>
-                    <div class="reg-card" style="border-left-color: #a7ff83;"><h6>AC (Hex)<span id="AC_HEX" style="color: #a7ff83;">0</span></h6></div>
+                    <div class="reg-card" style="border-left-color: #a7ff83;"><h6>AC (Hex)<span id="AC_HEX" style="color: #a7ff83;">0000</span></h6></div>
                     <div class="reg-card" style="border-left-color: #a7ff83;"><h6>AC (Int)<span id="AC_INT">0</span></h6></div>
                     <div class="reg-card" style="grid-column: span 2;"><h6>E-AC<span id="AC">0000000000000000</span></h6></div>
                 </div>
@@ -183,24 +189,28 @@
     <script src="js/app-compiled.min.js"></script>
 
     <script>
+        var txtArea = document.getElementById('custom_source');
+
         window.addEventListener('load', function() {
-            var txtArea = document.getElementById('custom_source');
-            
-            // Imposta codice iniziale standard
+            // Imposta codice d'esame predefinito
             txtArea.value = "ORG 180\nCMA\nINC\nADD X\nSTA Y\nBUN Y I\nHLT\nORG 179\nISZ X\nINIT, LDA X\nADD Y\nSTA Y I\nBSA Y\nISZ Y I\nHEX 7001\nBUN INIT\nX, HEX 1\nY, HEX 181\nZ, DEC 383\nBUN X I\nADD Z\nEND";
-            
-            // Ogni volta che si clicca "Compile", travasi il codice dentro CodeMirror nascosto prima che l'app compili
-            document.getElementById('btn_compile').addEventListener('touchstart', function() {
-                if(typeof myCodeMirror !== 'undefined') {
-                    myCodeMirror.setValue(txtArea.value);
-                }
-            });
-            document.getElementById('btn_compile').addEventListener('click', function() {
-                if(typeof myCodeMirror !== 'undefined') {
-                    myCodeMirror.setValue(txtArea.value);
-                }
-            });
         });
+
+        function triggerProfAction(actionName) {
+            if (typeof pdp8_webapp === 'undefined') return;
+            
+            // Se compiliamo, sincronizziamo prima la textarea custom nel motore interno
+            if (actionName === 'compile' && typeof myCodeMirror !== 'undefined') {
+                myCodeMirror.setValue(txtArea.value);
+            }
+            
+            // Eseguiamo l'azione hardware nativa bypassando i vecchi listener bloccati
+            try {
+                pdp8_webapp[actionName]();
+            } catch (e) {
+                console.error("Errore esecuzione comando hardware:", e);
+            }
+        }
     </script>
   </body>
 </html>
