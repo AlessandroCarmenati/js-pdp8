@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="bower_components/tether/dist/css/tether.min.css">
     <link rel="stylesheet" href="bower_components/codemirror/lib/codemirror.css">
-    <link rel="stylesheet" href="bower_components/codemirror/theme/mdn-like.css">
     <link rel="stylesheet" href="css/style.css">
 
     <style>
@@ -31,14 +30,13 @@
         hr { border-top: 1px solid #333; }
         h5 { color: var(--accent-color); font-weight: bold; margin-bottom: 8px; font-size: 1rem; }
         
-        /* Griglia dei Pulsanti Mobile-Friendly */
         .mobile-toolbar {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 6px;
             margin-bottom: 10px;
         }
-        .mobile-toolbar button, .mobile-toolbar label {
+        .mobile-toolbar button {
             background-color: #333 !important;
             color: white !important;
             border: none !important;
@@ -49,7 +47,6 @@
             text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             margin: 0 !important;
-            cursor: pointer;
         }
         .mobile-toolbar button:active { transform: scale(0.95); }
         #btn_compile { background-color: var(--accent-color) !important; color: #121212 !important; }
@@ -58,18 +55,29 @@
         #btn_stop { background-color: var(--btn-red) !important; }
         #btn_step { background-color: #1565c0 !important; grid-column: span 2; padding: 14px 2px !important; font-size: 0.95rem !important; }
 
-        /* Fix per CodeMirror (Editor di codice e RAM) */
-        .CodeMirror {
-            background: #151515 !important;
+        /* Editor Nativo IOS sbloccato al 100% */
+        .native-textarea {
+            width: 100%;
+            height: 200px;
+            background-color: #151515 !important;
             color: #a7ff83 !important;
             border: 1px solid #333 !important;
             border-radius: 6px !important;
-            height: 200px !important;
-            font-size: 0.9rem !important;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.95rem;
+            box-sizing: border-box;
         }
-        .CodeMirror-cursor { border-left: 2px solid white !important; }
 
-        /* Box dei Registri Elegante */
+        /* Spazio RAM originale tenuto per compatibilità visiva */
+        .CodeMirror {
+            background: #151515 !important;
+            color: #eeeeee !important;
+            border: 1px solid #333 !important;
+            border-radius: 6px !important;
+            height: 200px !important;
+        }
+
         .registers-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -87,7 +95,6 @@
         .reg-card h6 { margin: 0; font-size: 0.85rem; display: flex; flex-direction: column; }
         .reg-card span { font-family: monospace; font-weight: bold; font-size: 0.95rem; margin-top: 2px; }
         
-        /* Pannello di Controllo e Stato */
         .cu-container {
             background: var(--card-bg);
             padding: 8px;
@@ -97,7 +104,6 @@
         }
         .led-group { display: flex; gap: 10px; margin-bottom: 5px; }
         
-        /* Terminale */
         .terminal {
             background-color: #050505 !important;
             color: #ff5252 !important;
@@ -105,6 +111,8 @@
             font-size: 0.8rem;
             border: 1px solid #333;
         }
+        /* Elementi nascosti per non rompere il codice del prof */
+        #codeMirrorEditor { display: none !important; }
     </style>
   </head>
   <body>
@@ -119,14 +127,13 @@
             <button type="button" id="btn_fast_run">Fast</button>
             <button type="button" id="btn_step">STEP</button>
             <button type="button" id="btn_next">Next</button>
-            <button type="button" id="btn_save" style="display:none;">Save</button>
         </div>
 
         <div class="row">
             <div class="col-xs-12 col-md-4">
-                <h5>Source Code</h5>
-                <div id="codeMirrorEditor"></div>
-            </div>
+                <h5>Source Code (Editabile)</h5>
+                <textarea id="custom_source" class="native-textarea"></textarea>
+                <div id="codeMirrorEditor"></div> </div>
             
             <div class="col-xs-12 col-md-4" style="margin-top: 10px; margin-bottom: 10px;">
                 <h5>Ram Status</h5>
@@ -177,12 +184,22 @@
 
     <script>
         window.addEventListener('load', function() {
-            setTimeout(function() {
-                // Incolla automaticamente il codice d'esame dentro CodeMirror se è vuoto
+            var txtArea = document.getElementById('custom_source');
+            
+            // Imposta codice iniziale standard
+            txtArea.value = "ORG 180\nCMA\nINC\nADD X\nSTA Y\nBUN Y I\nHLT\nORG 179\nISZ X\nINIT, LDA X\nADD Y\nSTA Y I\nBSA Y\nISZ Y I\nHEX 7001\nBUN INIT\nX, HEX 1\nY, HEX 181\nZ, DEC 383\nBUN X I\nADD Z\nEND";
+            
+            // Ogni volta che si clicca "Compile", travasi il codice dentro CodeMirror nascosto prima che l'app compili
+            document.getElementById('btn_compile').addEventListener('touchstart', function() {
                 if(typeof myCodeMirror !== 'undefined') {
-                    myCodeMirror.setValue("ORG 180\nCMA\nINC\nADD X\nSTA Y\nBUN Y I\nHLT\nORG 179\nISZ X\nINIT, LDA X\nADD Y\nSTA Y I\nBSA Y\nISZ Y I\nHEX 7001\nBUN INIT\nX, HEX 1\nY, HEX 181\nZ, DEC 383\nBUN X I\nADD Z\nEND");
+                    myCodeMirror.setValue(txtArea.value);
                 }
-            }, 500);
+            });
+            document.getElementById('btn_compile').addEventListener('click', function() {
+                if(typeof myCodeMirror !== 'undefined') {
+                    myCodeMirror.setValue(txtArea.value);
+                }
+            });
         });
     </script>
   </body>
