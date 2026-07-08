@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1.0, user-scalable=no">
-    <title>JS-PDP8 Mobile Standalone</title>
+    <title>JS-PDP8 Mobile Standalone v2</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha.2/css/bootstrap.min.css">
     
@@ -37,7 +37,6 @@
             font-size: 0.8rem !important;
             font-weight: bold !important;
             border-radius: 6px !important;
-            text-shadow: none !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         .mobile-toolbar button:active { transform: scale(0.95); background-color: #444 !important; }
@@ -49,7 +48,7 @@
 
         .io-box {
             width: 100%;
-            height: 180px;
+            height: 160px;
             background-color: #151515 !important;
             color: #a7ff83 !important;
             border: 1px solid #333 !important;
@@ -60,6 +59,7 @@
             box-sizing: border-box;
         }
         #ram-viewer { color: #ffffff !important; white-space: pre; overflow-y: auto; }
+        #ac-history-box { color: #00adb5 !important; white-space: pre; overflow-y: auto; height: 140px; font-size: 0.85rem; }
         
         .label {
             font-family: monospace !important;
@@ -72,7 +72,8 @@
             color: #fff;
         }
         .label-primary { border-left-color: #a7ff83 !important; color: #a7ff83 !important; }
-        .terminal { background-color: #050505 !important; color: #ff5252 !important; font-family: monospace; font-size: 0.8rem; height: 60px; width:100%; border: 1px solid #333; padding: 5px; border-radius: 6px; }
+        .label-bit { font-size: 0.95rem !important; color: #a7ff83 !important; font-weight: bold; }
+        .terminal { background-color: #050505 !important; color: #ff5252 !important; font-family: monospace; font-size: 0.8rem; height: 50px; width:100%; border: 1px solid #333; padding: 5px; border-radius: 6px; }
         .row { margin: 0 -5px !important; }
         .col-xs-12, .col-xs-7, .col-xs-5, .col-xs-6 { padding: 0 5px !important; margin-bottom: 5px !important; }
         h6 { font-size: 0.8rem !important; margin-bottom: 2px !important; }
@@ -82,7 +83,7 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-xs-12">
-                <h4 style="color:var(--accent-color); text-align:center; margin-bottom:10px; font-weight:bold;">PDP-8 Mobile Emulator</h4>
+                <h4 style="color:var(--accent-color); text-align:center; margin-bottom:10px; font-weight:bold;">PDP-8 Mobile Emulator v2</h4>
                 <div class="mobile-toolbar">
                     <button type="button" id="m_compile" onclick="pdpCompile()">Compile</button>
                     <button type="button" id="m_reset" onclick="pdpReset()">Reset</button>
@@ -98,31 +99,49 @@
         <hr>
         <div class="row">
             <div class="col-xs-12">
-                <h5>Source (Scrivi o Incolla qui)</h5>
+                <h5>Source (Input Assembly)</h5>
                 <textarea id="src-editor" class="io-box" spellcheck="false"></textarea>
             </div>
-            <div class="col-xs-12" style="margin-top:10px;">
+            <div class="col-xs-12" style="margin-top:8px;">
                 <h5>Ram Status</h5>
-                <div id="ram-viewer" class="io-box">Incolla l'assembly e premi Compile</div>
+                <div id="ram-viewer" class="io-box">RAM vuota. Premi Compile.</div>
             </div>
-            <div class="col-xs-12" style="margin-top:10px;">
-                <h5>Registers</h5>
+            <div class="col-xs-12" style="margin-top:8px;">
+                <h5>Registers & Binary View</h5>
                 <div class="row">
-                    <div class="col-xs-7"><h6><span class="label" id="lbl_PC">000000000000</span> PC</h6></div>
-                    <div class="col-xs-5"><h6><span class="label" id="lbl_OPR">000</span> OPR</h6></div>
-                    <div class="col-xs-7"><h6><span class="label" id="lbl_MAR">000000000000</span> MAR</h6></div>
-                    <div class="col-xs-5"><h6><span class="label" id="lbl_I">0</span> I</h6></div>
-                    <div class="col-xs-12"><h6><span class="label" id="lbl_MBR">0000000000000000</span> MBR</h6></div>
-                    <div class="col-xs-6"><h6><span class="label label-primary" id="lbl_ACHEX">0000</span> AC (hex)</h6></div>
-                    <div class="col-xs-6"><h6><span class="label label-primary" id="lbl_ACINT">0</span> AC (int)</h6></div>
+                    <div class="col-xs-12">
+                        <h6>E - AC (Completo 12 Bit Binario):</h6>
+                        <span class="label label-primary label-bit" id="lbl_E_AC_BIN">0 - 0000 0000 0000</span>
+                    </div>
+                    <div class="col-xs-6" style="margin-top: 4px;">
+                        <h6>AC (Hex): <span class="label label-primary" id="lbl_ACHEX">0000</span></h6>
+                    </div>
+                    <div class="col-xs-6" style="margin-top: 4px;">
+                        <h6>AC (Int): <span class="label label-primary" id="lbl_ACINT">0</span></h6>
+                    </div>
+                    <div class="col-xs-7" style="margin-top: 4px;">
+                        <h6>PC: <span class="label" id="lbl_PC">000000000000</span></h6>
+                    </div>
+                    <div class="col-xs-5" style="margin-top: 4px;">
+                        <h6>MAR: <span class="label" id="lbl_MAR">000000000000</span></h6>
+                    </div>
                 </div>
-                <hr>
+                <hr style="margin: 5px 0 !important;">
                 <div class="row">
-                    <div class="col-xs-6"><h6>Cycle: <span class="label" id="lbl_cycle">FETCH</span></h6></div>
-                    <div class="col-xs-6"><h6>Last: <span class="label" id="lbl_last">NOP</span></h6></div>
+                    <div class="col-xs-6"><h6>Istruzione: <span class="label" id="lbl_last">NOP</span></h6></div>
+                    <div class="col-xs-6"><h6>Ciclo: <span class="label" id="lbl_cycle">FETCH</span></h6></div>
                 </div>
             </div>
         </div>
+        
+        <hr>
+        <div class="row">
+            <div class="col-xs-12">
+                <h5>Cronologia Stati AC (Dall'inizio alla fine)</h5>
+                <div id="ac-history-box" class="io-box">Nessun ciclo eseguito. Clicca su STEP per tracciare i bit...</div>
+            </div>
+        </div>
+
         <hr>
         <div class="row">
             <div class="col-xs-12">
@@ -132,12 +151,15 @@
         </div>
     </div>
 
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     
     <script>
         function octalToDec(octalStr) { return parseInt(octalStr, 8); }
 
-        var pdp8 = { pc: 0, ac: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, labels: {}, running: false, startAddr: 0 };
+        var pdp8 = { pc: 0, ac: 0, e: 0, mar: 0, mbr: 0, opr: 0, i: 0, cycle: "FETCH", last: "NOP", ram: {}, labels: {}, running: false, startAddr: 0 };
+        var acHistory = []; // Vettore per salvare lo storico degli AC
+        
+        // Il tuo codice d'esame completo inserito di default
         var srcText = "ORG 180\nCMA\nINC\nADD X\nSTA Y\nBUN Y I\nHLT\nORG 179\nISZ X\nINIT, LDA X\nADD Y\nSTA Y I\nBSA Y\nISZ Y I\nHEX 7001\nBUN INIT\nX, HEX 1\nY, HEX 181\nZ, DEC 383\nBUN X I\nADD Z\nEND";
 
         window.addEventListener('load', function() {
@@ -146,16 +168,22 @@
         });
 
         function updateUI() {
-            document.getElementById('lbl_PC').innerText = pdp8.pc.toString(2).padStart(12, '0') + " (" + pdp8.pc.toString(8) + " Oct)";
-            document.getElementById('lbl_MAR').innerText = pdp8.mar.toString(2).padStart(12, '0') + " (" + pdp8.mar.toString(8) + " Oct)";
-            document.getElementById('lbl_MBR').innerText = pdp8.mbr.toString(2).padStart(16, '0');
-            document.getElementById('lbl_OPR').innerText = pdp8.opr.toString(2).padStart(3, '0');
-            document.getElementById('lbl_I').innerText = pdp8.i;
+            // Calcolo stringa binaria a 12 bit dell'accumulatore
+            var acBinStr = pdp8.ac.toString(2).padStart(12, '0');
+            // Formatta con uno spazio per renderlo leggibile a blocchi di 4 bit
+            var formattedAcBin = acBinStr.substr(0, 4) + " " + acBinStr.substr(4, 4) + " " + acBinStr.substr(8, 4);
+            
+            // Aggiorna la vista completa richiesta dell'AC in bit
+            document.getElementById('lbl_E_AC_BIN').innerText = pdp8.e + " - " + formattedAcBin;
+            
+            document.getElementById('lbl_PC').innerText = pdp8.pc.toString(8).padStart(4, '0') + " (Oct)";
+            document.getElementById('lbl_MAR').innerText = pdp8.mar.toString(8).padStart(4, '0') + " (Oct)";
             document.getElementById('lbl_ACHEX').innerText = pdp8.ac.toString(16).toUpperCase().padStart(4, '0');
             document.getElementById('lbl_ACINT').innerText = (pdp8.ac > 0x7FF) ? pdp8.ac - 0x1000 : pdp8.ac;
             document.getElementById('lbl_cycle').innerText = pdp8.cycle;
             document.getElementById('lbl_last').innerText = pdp8.last;
 
+            // Aggiorna il Viewer della RAM
             var ramStr = "";
             var sortedAddrs = Object.keys(pdp8.ram).map(Number).sort((a,b) => a-b);
             sortedAddrs.forEach(function(addr) {
@@ -164,17 +192,24 @@
                 var displayVal = typeof val === 'number' ? "HEX " + val.toString(16).toUpperCase() : val;
                 ramStr += "Cella [" + octAddr + "]: " + displayVal + "\n";
             });
-            document.getElementById('ram-viewer').innerText = ramStr || "RAM vuota. Premi Compile.";
+            document.getElementById('ram-viewer').innerText = ramStr;
+
+            // Aggiorna il box cronologico richiesto di tutti gli AC salvati
+            var historyText = "";
+            acHistory.forEach(function(item, index) {
+                historyText += "[" + (index + 1) + "] Istr: " + item.instr.padEnd(12, ' ') + " -> AC Bit: " + item.bin + " (Hex: " + item.hex + ")\n";
+            });
+            document.getElementById('ac-history-box').innerText = historyText || "Nessun ciclo registrato.";
         }
 
         function pdpCompile() {
             var lines = document.getElementById('src-editor').value.split('\n');
             pdp8.ram = {};
             pdp8.labels = {};
+            acHistory = []; // Resetta la cronologia dei bit
             var currentAddrDec = octalToDec("180");
             var targetPC = null;
             
-            // Fase 1: Mappatura Etichette (Label)
             lines.forEach(function(line) {
                 line = line.trim().split("//")[0].split(";")[0].toUpperCase();
                 if(!line || line.startsWith('END')) return;
@@ -195,7 +230,6 @@
                 currentAddrDec++;
             });
             
-            // Fase 2: Risoluzione Dati Statici (HEX e DEC)
             for (var addr in pdp8.ram) {
                 var instr = pdp8.ram[addr];
                 if (typeof instr === 'string') {
@@ -211,33 +245,33 @@
             pdp8.startAddr = targetPC || octalToDec("180");
             pdp8.pc = pdp8.startAddr;
             pdp8.ac = 0;
+            pdp8.e = 0;
             pdp8.cycle = "FETCH";
-            pdp8.last = "NOP";
+            pdp8.last = "START";
             
-            document.getElementById('lbl_term').value = "Compilazione eseguita ed etichette collegate correttamente.";
+            document.getElementById('lbl_term').value = "Compilazione completata. Grafica a 12 bit e log cronologia attivi.";
             updateUI();
         }
 
         function pdpReset() {
             pdpCompile();
-            document.getElementById('lbl_term').value = "Simulatore resettato all'inizio del programma.";
+            document.getElementById('lbl_term').value = "Simulatore e cronologia azzerati.";
         }
 
-        function pdpStart() { pdp8.running = true; document.getElementById('lbl_term').value = "Simulatore Pronto."; }
-        function pdpStop() { pdp8.running = false; document.getElementById('lbl_term').value = "Simulatore in Pausa."; }
+        function pdpStart() { pdp8.running = true; }
+        function pdpStop() { pdp8.running = false; }
         
         function pdpStep() {
             if(pdp8.ram[pdp8.pc] === undefined) {
-                document.getElementById('lbl_term').value = "Fine della memoria o cella vuota raggiunta.";
+                document.getElementById('lbl_term').value = "Fine codice raggiunta.";
                 return;
             }
             
             var currentInstr = pdp8.ram[pdp8.pc];
             pdp8.mar = pdp8.pc;
             
-            // Se incontriamo una cella che contiene un dato puro, saltiamo avanti per evitare crash
             if (typeof currentInstr === 'number') {
-                pdp8.last = "DATO IN MEMORIA: " + currentInstr.toString(16).toUpperCase();
+                pdp8.last = "DATO: " + currentInstr.toString(16).toUpperCase();
                 pdp8.pc = (pdp8.pc + 1) & 0xFFF;
                 updateUI();
                 return;
@@ -245,49 +279,43 @@
 
             pdp8.last = currentInstr;
             pdp8.cycle = "EXECUTE";
-            
-            // Avanzamento automatico del PC
             pdp8.pc = (pdp8.pc + 1) & 0xFFF;
 
             var tokens = currentInstr.split(/\s+/);
             var op = tokens[0];
             var operand = tokens[1];
-            
-            // Controlla se è presente il flag di indirizzamento indiretto "I"
             var isIndirect = tokens.indexOf('I') > -1 || tokens[2] === 'I';
-            pdp8.i = isIndirect ? 1 : 0;
 
-            // Risoluzione indirizzo dell'operando
             var targetAddr = undefined;
             if (operand) {
                 targetAddr = pdp8.labels[operand] !== undefined ? pdp8.labels[operand] : octalToDec(operand);
             }
 
             if (isIndirect && targetAddr !== undefined) {
-                // L'indirizzamento indiretto legge il CONTENUTO della cella puntata
                 var contenuto = pdp8.ram[targetAddr];
-                if (typeof contenuto === 'number') {
-                    targetAddr = contenuto; 
-                } else if (typeof contenuto === 'string' && pdp8.labels[contenuto] !== undefined) {
-                    targetAddr = pdp8.labels[contenuto];
-                }
+                if (typeof contenuto === 'number') targetAddr = contenuto;
+                else if (typeof contenuto === 'string' && pdp8.labels[contenuto] !== undefined) targetAddr = pdp8.labels[contenuto];
             }
 
-            // Esecuzione Set di Istruzioni PDP-8
+            // Esecuzione istruzioni
             switch (op) {
                 case 'CMA':
                     pdp8.ac = (~pdp8.ac) & 0xFFF;
                     break;
                 case 'INC':
-                    pdp8.ac = (pdp8.ac + 1) & 0xFFF;
+                    var res = pdp8.ac + 1;
+                    if (res > 0xFFF) { pdp8.e = 1; } // Gestione del bit di Link/Estensione E
+                    pdp8.ac = res & 0xFFF;
                     break;
                 case 'LDA':
                     if (targetAddr !== undefined) pdp8.ac = (typeof pdp8.ram[targetAddr] === 'number' ? pdp8.ram[targetAddr] : 0) & 0xFFF;
                     break;
                 case 'ADD':
                     if (targetAddr !== undefined) {
-                        var valDaSommare = typeof pdp8.ram[targetAddr] === 'number' ? pdp8.ram[targetAddr] : 0;
-                        pdp8.ac = (pdp8.ac + valDaSommare) & 0xFFF;
+                        var val = typeof pdp8.ram[targetAddr] === 'number' ? pdp8.ram[targetAddr] : 0;
+                        var sum = pdp8.ac + val;
+                        if (sum > 0xFFF) pdp8.e = 1;
+                        pdp8.ac = sum & 0xFFF;
                     }
                     break;
                 case 'STA':
@@ -298,10 +326,20 @@
                     break;
                 case 'HLT':
                     pdp8.running = false;
-                    document.getElementById('lbl_term').value = "HLT Eseguito. Elaborazione completata.";
+                    document.getElementById('lbl_term').value = "HLT Eseguito.";
                     break;
             }
             
+            // Salvataggio automatico nello storico a ogni step
+            var acBinStr = pdp8.ac.toString(2).padStart(12, '0');
+            var formattedAcBin = pdp8.e + " - " + acBinStr.substr(0, 4) + " " + acBinStr.substr(4, 4) + " " + acBinStr.substr(8, 4);
+            
+            acHistory.push({
+                instr: currentInstr,
+                bin: formattedAcBin,
+                hex: pdp8.ac.toString(16).toUpperCase().padStart(3, '0')
+            });
+
             updateUI();
             pdp8.cycle = "FETCH";
         }
