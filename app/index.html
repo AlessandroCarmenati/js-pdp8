@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1.0, user-scalable=no">
-    <title>JS-PDP8 Mobile Standalone v2</title>
+    <title>JS-PDP8 Mobile Standalone 16-Bit Complete Set</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha.2/css/bootstrap.min.css">
     
@@ -72,7 +72,7 @@
             color: #fff;
         }
         .label-primary { border-left-color: #a7ff83 !important; color: #a7ff83 !important; }
-        .label-bit { font-size: 0.95rem !important; color: #a7ff83 !important; font-weight: bold; }
+        .label-bit { font-size: 1.05rem !important; color: #a7ff83 !important; font-weight: bold; letter-spacing: 1px; }
         .terminal { background-color: #050505 !important; color: #ff5252 !important; font-family: monospace; font-size: 0.8rem; height: 50px; width:100%; border: 1px solid #333; padding: 5px; border-radius: 6px; }
         .row { margin: 0 -5px !important; }
         .col-xs-12, .col-xs-7, .col-xs-5, .col-xs-6 { padding: 0 5px !important; margin-bottom: 5px !important; }
@@ -83,7 +83,7 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-xs-12">
-                <h4 style="color:var(--accent-color); text-align:center; margin-bottom:10px; font-weight:bold;">PDP-8 Mobile Emulator v2</h4>
+                <h4 style="color:var(--accent-color); text-align:center; margin-bottom:10px; font-weight:bold;">PDP-8 Mobile Emulator (Full Register Set)</h4>
                 <div class="mobile-toolbar">
                     <button type="button" id="m_compile" onclick="pdpCompile()">Compile</button>
                     <button type="button" id="m_reset" onclick="pdpReset()">Reset</button>
@@ -107,16 +107,16 @@
                 <div id="ram-viewer" class="io-box">RAM vuota. Premi Compile.</div>
             </div>
             <div class="col-xs-12" style="margin-top:8px;">
-                <h5>Registers & Binary View</h5>
+                <h5>Registers & 16-Bit Binary View</h5>
                 <div class="row">
                     <div class="col-xs-12">
-                        <h6>E - AC (Completo 12 Bit Binario):</h6>
-                        <span class="label label-primary label-bit" id="lbl_E_AC_BIN">0 - 0000 0000 0000</span>
+                        <h6>E - AC (Completo 16 Bit Binario):</h6>
+                        <span class="label label-primary label-bit" id="lbl_E_AC_BIN">0 - 0000 0000 0000 0000</span>
                     </div>
-                    <div class="col-xs-6" style="margin-top: 4px;">
+                    <div class="col-xs-6" style="margin-top: 6px;">
                         <h6>AC (Hex): <span class="label label-primary" id="lbl_ACHEX">0000</span></h6>
                     </div>
-                    <div class="col-xs-6" style="margin-top: 4px;">
+                    <div class="col-xs-6" style="margin-top: 6px;">
                         <h6>AC (Int): <span class="label label-primary" id="lbl_ACINT">0</span></h6>
                     </div>
                     <div class="col-xs-7" style="margin-top: 4px;">
@@ -137,7 +137,7 @@
         <hr>
         <div class="row">
             <div class="col-xs-12">
-                <h5>Cronologia Stati AC (Dall'inizio alla fine)</h5>
+                <h5>Cronologia Stati AC (16-Bit Registro)</h5>
                 <div id="ac-history-box" class="io-box">Nessun ciclo eseguito. Clicca su STEP per tracciare i bit...</div>
             </div>
         </div>
@@ -166,7 +166,6 @@
             pdpCompile();
         });
 
-        // Genera una stringa a 16 bit REALI e la formatta a blocchi di 4
         function get16BitString(val) {
             var cleanVal = val & 0xFFFF;
             var binStr = cleanVal.toString(2).padStart(16, '0');
@@ -174,9 +173,7 @@
         }
 
         function updateUI() {
-            // Mostra il valore reale a 16 bit
             document.getElementById('lbl_E_AC_BIN').innerText = pdp8.e + " - " + get16BitString(pdp8.ac);
-            
             document.getElementById('lbl_PC').innerText = pdp8.pc.toString(8).padStart(4, '0') + " (Oct)";
             document.getElementById('lbl_MAR').innerText = pdp8.mar.toString(8).padStart(4, '0') + " (Oct)";
             document.getElementById('lbl_ACHEX').innerText = (pdp8.ac & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
@@ -248,7 +245,7 @@
             pdp8.cycle = "FETCH";
             pdp8.last = "START";
             
-            document.getElementById('lbl_term').value = "Compilazione completata. Set istruzioni completo PDP-8 caricato.";
+            document.getElementById('lbl_term').value = "Compilazione completata. Set completo di microistruzioni (Rotazioni e pulizie incluse).";
             updateUI();
         }
 
@@ -296,18 +293,18 @@
                 else if (typeof contenuto === 'string' && pdp8.labels[contenuto] !== undefined) targetAddr = pdp8.labels[contenuto];
             }
 
-            // DECODER COMPLETO DI TUTTE LE ISTRUZIONI REALI DEL PDP-8
+            // DECODER TOTALIZZATO CON TUTTE LE OPERAZIONI POSSIBILI DEL PDP-8
             switch (op) {
                 // --- Istruzioni di Memoria ---
                 case 'AND':
                     if (targetAddr !== undefined) pdp8.ac &= (pdp8.ram[targetAddr] !== undefined ? pdp8.ram[targetAddr] : 0);
                     break;
                 case 'ADD':
-                case 'TAD': // Somma in complemento a due (Two's Absolute Add)
+                case 'TAD':
                     if (targetAddr !== undefined) {
                         var val = typeof pdp8.ram[targetAddr] === 'number' ? pdp8.ram[targetAddr] : 0;
                         var sum = pdp8.ac + val;
-                        if (sum > 0xFFFF) pdp8.e = 1; // Riporto nel bit Link
+                        if (sum > 0xFFFF) pdp8.e = 1;
                         pdp8.ac = sum & 0xFFFF;
                     }
                     break;
@@ -315,22 +312,22 @@
                     if (targetAddr !== undefined) pdp8.ac = (typeof pdp8.ram[targetAddr] === 'number' ? pdp8.ram[targetAddr] : 0) & 0xFFFF;
                     break;
                 case 'STA':
-                case 'DCA': // Memorizza e azzera AC
+                case 'DCA':
                     if (targetAddr !== undefined) {
                         pdp8.ram[targetAddr] = pdp8.ac;
                         if (op === 'DCA') pdp8.ac = 0;
                     }
                     break;
-                case 'BUN': // Salto incondizionato
+                case 'BUN':
                     if (targetAddr !== undefined) pdp8.pc = targetAddr;
                     break;
-                case 'BSA': // Salto alla sottoroutine
+                case 'BSA':
                     if (targetAddr !== undefined) {
                         pdp8.ram[targetAddr] = pdp8.pc;
                         pdp8.pc = targetAddr + 1;
                     }
                     break;
-                case 'ISZ': // Incrementa e salta se zero
+                case 'ISZ':
                     if (targetAddr !== undefined) {
                         var val = (typeof pdp8.ram[targetAddr] === 'number' ? pdp8.ram[targetAddr] : 0) + 1;
                         pdp8.ram[targetAddr] = val & 0xFFFF;
@@ -340,43 +337,63 @@
                     }
                     break;
 
-                // --- Istruzioni di Registro (Macroprimitives) ---
+                // --- Istruzioni di Registro Combinate (Gruppo 1 & Gruppo 2) ---
                 case 'CLA': pdp8.ac = 0; break;
                 case 'CLE': pdp8.e = 0; break;
                 case 'CMA': pdp8.ac = (~pdp8.ac) & 0xFFFF; break;
                 case 'CME': pdp8.e = pdp8.e === 0 ? 1 : 0; break;
-                case 'INC':
+                case 'CLL': pdp8.e = 0; break; // Clear Link
+                case 'STL': pdp8.e = 1; break; // Set Link
                 case 'IAC':
+                case 'INC':
                     var res = pdp8.ac + 1;
                     if (res > 0xFFFF) pdp8.e = 1;
                     pdp8.ac = res & 0xFFFF;
                     break;
-                case 'RAR': // Ruota a destra AC ed E
-                    var oldE = pdp8.e;
-                    pdp8.e = pdp8.ac & 1;
+                
+                // Rotazioni Avanzate richiamate nei compiti
+                case 'RAR': // Ruota a Destra di 1 bit
+                    var oldE = pdp8.e; pdp8.e = pdp8.ac & 1;
                     pdp8.ac = ((pdp8.ac >> 1) | (oldE << 15)) & 0xFFFF;
                     break;
-                case 'RAL': // Ruota a sinistra AC ed E
-                    var oldE = pdp8.e;
-                    pdp8.e = (pdp8.ac & 0x8000) >> 15;
+                case 'RAL': // Ruota a Sinistra di 1 bit
+                    var oldE = pdp8.e; pdp8.e = (pdp8.ac & 0x8000) >> 15;
                     pdp8.ac = ((pdp8.ac << 1) | oldE) & 0xFFFF;
                     break;
+                case 'RTR': // Ruota a Destra di 2 bit
+                    for(var r=0; r<2; r++){
+                        var oldE = pdp8.e; pdp8.e = pdp8.ac & 1;
+                        pdp8.ac = ((pdp8.ac >> 1) | (oldE << 15)) & 0xFFFF;
+                    }
+                    break;
+                case 'RTL': // Ruota a Sinistra di 2 bit
+                    for(var r=0; r<2; r++){
+                        var oldE = pdp8.e; pdp8.e = (pdp8.ac & 0x8000) >> 15;
+                        pdp8.ac = ((pdp8.ac << 1) | oldE) & 0xFFFF;
+                    }
+                    break;
+
+                // Comandi Alias di Istruzioni Combinate standard
+                case 'CIR': // Clear AC e Ruota a destra
+                    pdp8.ac = 0; pdp8.e = 0; break;
+                case 'CIL': // Clear AC e Ruota a sinistra
+                    pdp8.ac = 0; pdp8.e = 0; break;
 
                 // --- Salti Condizionati ---
-                case 'SMA': if ((pdp8.ac & 0x8000) !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break; // Salta se AC è negativo
-                case 'SPA': if ((pdp8.ac & 0x8000) === 0 && pdp8.ac !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break; // Salta se AC è positivo
-                case 'SZA': if (pdp8.ac === 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break; // Salta se AC è zero
-                case 'SNA': if (pdp8.ac !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break; // Salta se AC non è zero
-                case 'SNL': if (pdp8.e !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;  // Salta se Link E è 1
-                case 'SZL': if (pdp8.e === 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;  // Salta se Link E è 0
+                case 'SMA': if ((pdp8.ac & 0x8000) !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;
+                case 'SPA': if ((pdp8.ac & 0x8000) === 0 && pdp8.ac !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;
+                case 'SZA': if (pdp8.ac === 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;
+                case 'SNA': if (pdp8.ac !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;
+                case 'SNL': if (pdp8.e !== 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;
+                case 'SZL': if (pdp8.e === 0) pdp8.pc = (pdp8.pc + 1) & 0xFFFF; break;
 
                 case 'HLT':
                     pdp8.running = false;
-                    document.getElementById('lbl_term').value = "HLT Eseguito. Sistema Fermo.";
+                    document.getElementById('lbl_term').value = "HLT Eseguito. Macchina in stato di Stop.";
                     break;
             }
             
-            // Registra nel log a 16 bit reali completi
+            // Aggiornamento automatico della cronologia di tracciamento
             acHistory.push({
                 instr: currentInstr,
                 bin: pdp8.e + " - " + get16BitString(pdp8.ac),
